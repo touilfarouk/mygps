@@ -40,7 +40,7 @@ data class Coordinates(
 object ApiClient {
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("")
+            .baseUrl("https://onta.dz/api/location/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -157,6 +157,8 @@ class LocationService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setContentTitle("Location Updates")
             .setContentText("$lat - $lng")
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Lower priority = no sound
+            .setSilent(true) // Makes it completely silent
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
