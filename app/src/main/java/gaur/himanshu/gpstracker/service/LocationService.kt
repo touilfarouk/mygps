@@ -23,7 +23,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.POST
 
+interface LocationApi {
+    @POST("index.php")
+    suspend fun sendCoordinates(@Body coords: Coordinates): Response<Unit>
+}
+data class Coordinates(
+    val latitude: String,
+    val longitude: String
+)
+object ApiClient {
+    private val retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://onta.dz/api/location/") // Replace with your real URL
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    val locationApi: LocationApi by lazy {
+        retrofit.create(LocationApi::class.java)
+    }
+}
 class LocationService : Service() {
 
     private val locationRequest by lazy {
@@ -43,8 +68,24 @@ class LocationService : Service() {
                 val lat = location.lastLocation?.latitude.toString()
                 val lng = location.lastLocation?.longitude.toString()
                 Log.d("TAGGGGGGGG", "onLocationResult: ${lat} $lng")
+
+                // Call Retrofit here
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = ApiClient.locationApi.sendCoordinates(Coordinates(lat, lng))
+                        if (response.isSuccessful) {
+                            Log.d("UPLOAD", "Coordinates sent successfully")
+                        } else {
+                            Log.e("UPLOAD", "Error: ${response.code()}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("UPLOAD", "Exception: ${e.message}")
+                    }
+                }
+
                 startServiceOfForeground(lat, lng)
             }
+
         }
     }
 
