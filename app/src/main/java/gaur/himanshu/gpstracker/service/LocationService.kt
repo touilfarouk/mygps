@@ -40,7 +40,7 @@ data class Coordinates(
 object ApiClient {
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("https://onta.dz/api/location/") // Replace with your real URL
+            .baseUrl("")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
