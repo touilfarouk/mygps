@@ -50,7 +50,10 @@ object ApiClient {
     }
 }
 class LocationService : Service() {
-
+    private var isCollecting = true
+    private var stationaryStartTime: Long? = null
+    private val STATIONARY_THRESHOLD_MS = 15_000L // 15 seconds
+    private val SPEED_THRESHOLD = 1.0f // m/s, adjust to ~0.5f for walking
     private val locationRequest by lazy {
         LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
             .setIntervalMillis(
@@ -65,11 +68,36 @@ class LocationService : Service() {
             }
 
             override fun onLocationResult(location: LocationResult) {
-                val lat = location.lastLocation?.latitude.toString()
-                val lng = location.lastLocation?.longitude.toString()
-                Log.d("TAGGGGGGGG", "onLocationResult: ${lat} $lng")
+                val loc = location.lastLocation ?: return
+                val lat = loc.latitude.toString()
+                val lng = loc.longitude.toString()
+                val speed = loc.speed // in meters/second
 
-                // Call Retrofit here
+                Log.d("SPEED_CHECK", "Speed: $speed m/s")
+
+                if (speed < SPEED_THRESHOLD) {
+                    if (stationaryStartTime == null) {
+                        stationaryStartTime = System.currentTimeMillis()
+                    } else {
+                        val elapsed = System.currentTimeMillis() - stationaryStartTime!!
+                        if (elapsed >= STATIONARY_THRESHOLD_MS) {
+                            if (isCollecting) {
+                                Log.d("GPS_TRACKER", "User is stationary. Pausing collection.")
+                                isCollecting = false
+                            }
+                        }
+                    }
+                } else {
+                    if (!isCollecting) {
+                        Log.d("GPS_TRACKER", "User started moving. Resuming collection.")
+                        isCollecting = true
+                    }
+                    stationaryStartTime = null
+                }
+
+                if (!isCollecting) return
+
+                // Send coordinates
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val response = ApiClient.locationApi.sendCoordinates(Coordinates(lat, lng))
