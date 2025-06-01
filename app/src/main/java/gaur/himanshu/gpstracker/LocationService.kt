@@ -1,4 +1,4 @@
-package gaur.himanshu.gpstracker.service
+package gaur.himanshu.gpstracker
 
 import android.Manifest
 import android.Manifest.permission.POST_NOTIFICATIONS
@@ -17,11 +17,8 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import gaur.himanshu.gpstracker.CHANNEL_ID
-import gaur.himanshu.gpstracker.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -40,7 +37,7 @@ data class Coordinates(
 object ApiClient {
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("")
+            .baseUrl("https://onta.dz/api/location/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -127,7 +124,7 @@ class LocationService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         locationUpdates()
-        return START_REDELIVER_INTENT
+        return START_STICKY
     }
 
     override fun onDestroy() {

@@ -15,11 +15,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import gaur.himanshu.gpstracker.service.LocationService
 import gaur.himanshu.gpstracker.ui.theme.GPSTrackerTheme
 
 class MainActivity : ComponentActivity() {
+    private fun isServiceRunning(): Boolean {
+        val prefs = getSharedPreferences("service_prefs", MODE_PRIVATE)
+        return prefs.getBoolean("is_service_running", false)
+    }
 
+    private fun setServiceRunning(isRunning: Boolean) {
+        val prefs = getSharedPreferences("service_prefs", MODE_PRIVATE)
+        prefs.edit().putBoolean("is_service_running", isRunning).apply()
+    }
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +54,7 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    var isGpsActive by remember { mutableStateOf(false) }
+                    var isGpsActive by remember { mutableStateOf(isServiceRunning()) }
 
                     LaunchedEffect(Unit) {
                         permission.launchMultiplePermissionRequest()
@@ -65,13 +72,26 @@ class MainActivity : ComponentActivity() {
                                         val intent = Intent(this@MainActivity, LocationService::class.java)
                                         startService(intent)
                                         isGpsActive = true
-                                    },
+                                        setServiceRunning(true)
+
+                                        // Ask to disable battery optimizations
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                            val powerManager = getSystemService(POWER_SERVICE) as android.os.PowerManager
+                                            val packageName = packageName
+                                            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                                                val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                                startActivity(intent)
+                                            }
+                                        }
+                                    }
+                                    ,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (isGpsActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
                                     )
                                 ) {
                                     Text(text = if (isGpsActive) "Service Running" else "Start Service")
                                 }
+
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -80,7 +100,9 @@ class MainActivity : ComponentActivity() {
                                         val intent = Intent(this@MainActivity, LocationService::class.java)
                                         stopService(intent)
                                         isGpsActive = false
-                                    },
+                                        setServiceRunning(false)
+                                    }
+                                    ,
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
                                 ) {
                                     Text(text = "Stop Service")
@@ -101,3 +123,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
